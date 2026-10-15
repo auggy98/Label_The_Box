@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Label The Box - Puzzle</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #eef2f5;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 10px 20px;
+            line-height: 1.4;
+            font-size: 14px;
+        }
+        h1 { margin: 0 0 5px 0; font-size: 1.6rem; color: #2c3e50; }
+        p { margin: 5px 0; }
+        
+        .story-container {
+            background: #fff;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            margin-bottom: 15px;
+        }
+        .controls-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .btn-mode {
+            background: #e0e0e0;
+            color: #333;
+            border: 1px solid #ccc;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .btn-mode.active { background: #007bff; color: #fff; border-color: #0056b3; }
+        .btn-mode:hover:not(.active) { background: #d4d4d4; }
+        
+        .moves { font-size: 1.1rem; font-weight: bold; color: #0056b3; }
+        
+        /* Forces exactly 3 boxes per row */
+        .boxes-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        
+        .box {
+            background: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: box-shadow 0.2s;
+        }
+        .box:hover { box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+        .box h2 { margin-top: 0; margin-bottom: 5px; color: #d9534f; font-size: 1.3rem; }
+        
+        .marbles-display {
+            width: 100%;
+            min-height: 45px;
+            max-height: 75px;
+            overflow-y: auto;
+            display: flex;
+            justify-content: center;
+            align-content: flex-start;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 10px 0;
+            padding: 5px;
+            background: #f9f9f9;
+            border-radius: 6px;
+            border: 1px dashed #ccc;
+            box-sizing: border-box;
+        }
+        .marble {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            box-shadow: inset -4px -4px 8px rgba(0,0,0,0.3), 0 2px 3px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+        /* Marble Colors */
+        .marble-black { background-color: #222; }
+        .marble-white { background-color: #fcfcfc; border: 1px solid #ccc; }
+        .marble-red { background-color: #e74c3c; }
+        .marble-green { background-color: #2ecc71; }
+        .marble-blue { background-color: #3498db; }
+        
+        .btn-draw {
+            background: #17a2b8;
+            color: #fff;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .btn-draw:hover { background: #138496; }
+        .btn-draw:disabled { background: #ccc; cursor: not-allowed; }
+        
+        /* Elimination UI Styles */
+        .guess-section { width: 100%; margin-top: 5px; }
+        .guess-section-title { font-size: 0.85rem; color: #666; margin-bottom: 5px; }
+        
+        .options-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            justify-content: center;
+        }
+        .option-pill {
+            display: inline-flex;
+            align-items: stretch;
+            border: 1px solid #bbb;
+            border-radius: 4px;
+            overflow: hidden;
+            font-size: 0.85rem;
+            user-select: none;
+            background: #fff;
+        }
+        .option-pill.eliminated {
+            opacity: 0.4;
+            background: #eee;
+        }
+        .option-pill.eliminated .pill-text {
+            text-decoration: line-through;
+            color: #888;
+        }
+        .option-pill.selected {
+            border-color: #28a745;
+            background-color: #e6f4ea;
+        }
+        .pill-text {
+            padding: 4px 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.1s;
+        }
+        .pill-text:hover { background-color: #f0f0f0; }
+        .option-pill.selected .pill-text { color: #155724; }
+        .option-pill.selected .pill-text:hover { background-color: #d4edda; }
+        
+        .pill-cross {
+            padding: 4px 6px;
+            cursor: pointer;
+            background: #f4f4f4;
+            border-left: 1px solid #bbb;
+            color: #d9534f;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.1s;
+        }
+        .pill-cross:hover { background: #e0e0e0; color: #c9302c; }
+        .option-pill.eliminated .pill-cross { background: #ddd; }
+
+        .action-area {
+            margin-top: 15px;
+            text-align: center;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .btn-reset { background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-reset:hover { background: #5a6268; }
+        .btn-submit { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 1.1rem; }
+        .btn-submit:hover { background: #218838; }
+        .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+        
+        #result-message { margin-top: 10px; font-size: 1.1rem; font-weight: bold; min-height: 25px; }
+        .success { color: #28a745; }
+        .error { color: #d9534f; }
+
+        @media (max-width: 700px) {
+            .boxes-container { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="story-container">
+        <div id="story-part1">
+            <h1>Label The Box (Part 1)</h1>
+            <p><strong>Story:</strong> There are 3 boxes containing <strong>Black (B)</strong> and <strong>White (W)</strong> marbles. The boxes are labeled <strong>BB</strong>, <strong>WW</strong>, and <strong>BW</strong>, but <strong>all are incorrectly labeled</strong>. Draw one marble at a time (with replacement) to label them correctly!</p>
+        </div>
+        <div id="story-part2" style="display:none;">
+            <h1>Label The Box (Part 2)</h1>
+            <p><strong>Story:</strong> There are 6 boxes containing combinations of <strong>Red (R)</strong>, <strong>Green (G)</strong>, and <strong>Blue (B)</strong> marbles. The boxes are labeled <strong>RR, GG, BB, RG, GB, BR</strong>. <strong>All are incorrectly labeled.</strong></p>
+        </div>
+    </div>
+
+    <div class="controls-top">
+        <div>
+            <button id="btn-mode-1" class="btn-mode active" onclick="setMode(1)">Part 1 (3 Boxes)</button>
+            <button id="btn-mode-2" class="btn-mode" onclick="setMode(2)">Part 2 (6 Boxes)</button>
+        </div>
+        <div class="moves">Marbles drawn: <span id="move-count">0</span></div>
+        <button class="btn-reset" onclick="resetGame()">Reset Game</button>
+    </div>
+
+    <div class="boxes-container" id="boxes-container">
+        <!-- Boxes are generated here -->
+    </div>
+
+    <div class="action-area">
+        <h3 style="margin: 0 0 5px 0;">Make your final guess:</h3>
+        <p style="margin: 0 0 10px 0; color: #555;">Click the label text in each box to make your final selection, then click Submit.</p>
+        <button class="btn-submit" onclick="submitGuess()" id="submit-btn">Submit Guesses</button>
+        <div id="result-message"></div>
+    </div>
+
+    <script>
+        let currentMode = 1;
+        const typesPart1 = ["BB", "WW", "BW"];
+        const typesPart2 = ["RR", "GG", "BB", "RG", "GB", "BR"]; // Corrected to 6 boxes!
+        
+        let currentTypes = [];
+        let boxesData = [];
+        let moveCount = 0;
+
+        // State trackers for the new Elimination UI
+        let selectedLabels = [];
+        let eliminatedLabels = []; 
+
+        // Standardize sets so combinations compare flawlessly (e.g. "GB" == "BG")
+        function getSet(str) {
+            return str.split('').sort().join('');
+        }
+
+        function shuffleArray(array) {
+            let arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('btn-mode-1').className = mode === 1 ? 'btn-mode active' : 'btn-mode';
+            document.getElementById('btn-mode-2').className = mode === 2 ? 'btn-mode active' : 'btn-mode';
+            
+            document.getElementById('story-part1').style.display = mode === 1 ? 'block' : 'none';
+            document.getElementById('story-part2').style.display = mode === 2 ? 'block' : 'none';
+            
+            currentTypes = mode === 1 ? typesPart1 : typesPart2;
+            resetGame();
+        }
+
+        function generateGameData() {
+            let actualContents = shuffleArray(currentTypes);
+            let labels;
+
+            // Generate strict derangements (No box gets a label matching its contents)
+            while (true) {
+                labels = shuffleArray(currentTypes);
+                let allWrong = true;
+                for (let i = 0; i < currentTypes.length; i++) {
+                    if (getSet(actualContents[i]) === getSet(labels[i])) {
+                        allWrong = false;
+                        break;
+                    }
+                }
+                if (allWrong) break;
+            }
+
+            boxesData = [];
+            for (let i = 0; i < currentTypes.length; i++) {
+                boxesData.push({
+                    id: i,
+                    actualString: actualContents[i], 
+                    wrongLabel: labels[i]
+                });
+            }
+        }
+
+        function renderBoxes() {
+            const container = document.getElementById("boxes-container");
+            container.innerHTML = "";
+
+            boxesData.forEach((box, index) => {
+                const boxDiv = document.createElement("div");
+                boxDiv.className = "box";
+
+                boxDiv.innerHTML = `
+                    <h2><del>${box.wrongLabel}</del></h2>
+                    <div class="marbles-display" id="display-${index}">
+                        <span style="color: #aaa; font-size: 0.85rem; margin-top: 10px;">Hidden</span>
+                    </div>
+                    <button class="btn-draw" id="draw-btn-${index}" onclick="drawMarble(${index})">Draw a Marble</button>
+                    
+                    <div class="guess-section">
+                        <div class="guess-section-title">Label Tracker:</div>
+                        <div class="options-grid" id="options-${index}">
+                            <!-- Options rendered by JS -->
+                        </div>
+                    </div>
+                `;
+                container.appendChild(boxDiv);
+                renderOptions(index);
+            });
+        }
+
+        // Renders the pill UI for a specific box based on current state
+        function renderOptions(boxIndex) {
+            const container = document.getElementById(`options-${boxIndex}`);
+            container.innerHTML = "";
+
+            currentTypes.forEach(label => {
+                const isSelected = selectedLabels[boxIndex] === label;
+                const isEliminated = eliminatedLabels[boxIndex].has(label);
+                
+                let pillClass = "option-pill";
+                if (isSelected) pillClass += " selected";
+                if (isEliminated) pillClass += " eliminated";
+
+                container.innerHTML += `
+                    <div class="${pillClass}">
+                        <span class="pill-text" onclick="toggleSelect(${boxIndex}, '${label}')" title="Select this label">${label}</span>
+                        <span class="pill-cross" onclick="toggleEliminate(${boxIndex}, '${label}')" title="Cross out this label">×</span>
+                    </div>
+                `;
+            });
+        }
+
+        // Action: Clicking the text selects/deselects the guess
+        function toggleSelect(boxIndex, label) {
+            if (eliminatedLabels[boxIndex].has(label)) return; // Ignore if crossed out
+            
+            if (selectedLabels[boxIndex] === label) {
+                selectedLabels[boxIndex] = null; // Deselect
+            } else {
+                selectedLabels[boxIndex] = label; // Select
+            }
+            renderOptions(boxIndex);
+        }
+
+        // Action: Clicking the 'x' eliminates/restores the guess
+        function toggleEliminate(boxIndex, label) {
+            // Un-select if they eliminate their current guess
+            if (selectedLabels[boxIndex] === label) {
+                selectedLabels[boxIndex] = null;
+            }
+            
+            if (eliminatedLabels[boxIndex].has(label)) {
+                eliminatedLabels[boxIndex].delete(label); // Restore
+            } else {
+                eliminatedLabels[boxIndex].add(label); // Eliminate
+            }
+            renderOptions(boxIndex);
+        }
+
+        function drawMarble(boxIndex) {
+            const box = boxesData[boxIndex];
+            
+            // Random draw with replacement
+            const randomPick = Math.floor(Math.random() * 2);
+            const drawnMarble = box.actualString[randomPick];
+            
+            moveCount++;
+            document.getElementById("move-count").innerText = moveCount;
+
+            const displayArea = document.getElementById(`display-${boxIndex}`);
+            if (displayArea.innerHTML.includes("Hidden")) displayArea.innerHTML = "";
+            
+            const marbleElem = document.createElement("div");
+            
+            if (currentMode === 1) {
+                marbleElem.className = drawnMarble === 'B' ? 'marble marble-black' : 'marble marble-white';
+            } else {
+                if (drawnMarble === 'R') marbleElem.className = 'marble marble-red';
+                else if (drawnMarble === 'G') marbleElem.className = 'marble marble-green';
+                else if (drawnMarble === 'B') marbleElem.className = 'marble marble-blue';
+            }
+            
+            displayArea.appendChild(marbleElem);
+            displayArea.scrollTop = displayArea.scrollHeight;
+        }
+
+        function submitGuess() {
+            const msgDiv = document.getElementById("result-message");
+
+            // 1. Validate all boxes have a selection
+            if (selectedLabels.includes(null)) {
+                msgDiv.className = "error";
+                msgDiv.innerText = "Please select a final label for every box!";
+                return;
+            }
+
+            // 2. Validate selections are unique
+            const uniqueGuesses = new Set(selectedLabels);
+            if (uniqueGuesses.size < currentTypes.length) {
+                msgDiv.className = "error";
+                msgDiv.innerText = "Each label must be used exactly once.";
+                return;
+            }
+
+            // 3. Check correctness
+            let isCorrect = true;
+            for(let i = 0; i < currentTypes.length; i++) {
+                if (getSet(selectedLabels[i]) !== getSet(boxesData[i].actualString)) {
+                    isCorrect = false;
+                    break;
+                }
+            }
+
+            if (isCorrect) {
+                msgDiv.className = "success";
+                msgDiv.innerText = `Correct! You successfully deduced the boxes in ${moveCount} draws!`;
+                
+                document.getElementById("submit-btn").disabled = true;
+                for(let i = 0; i < currentTypes.length; i++) {
+                    document.getElementById(`draw-btn-${i}`).disabled = true;
+                }
+            } else {
+                msgDiv.className = "error";
+                msgDiv.innerText = "Incorrect assignment. Use the '×' buttons to eliminate wrong options and try again!";
+            }
+        }
+
+        function resetGame() {
+            moveCount = 0;
+            document.getElementById("move-count").innerText = moveCount;
+            document.getElementById("result-message").innerText = "";
+            document.getElementById("result-message").className = "";
+            document.getElementById("submit-btn").disabled = false;
+            
+            // Re-initialize tracking arrays
+            selectedLabels = new Array(currentTypes.length).fill(null);
+            eliminatedLabels = Array.from({length: currentTypes.length}, () => new Set());
+            
+            generateGameData();
+            renderBoxes();
+        }
+
+        // Initialize
+        setMode(1);
+    </script>
+</body>
+</html>
